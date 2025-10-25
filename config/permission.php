@@ -1,6 +1,8 @@
 <?php
 
 return [
+// اجعليه فوق أو تحت 'models' مباشرة — المكان مش مهم
+'default_guard' => 'sanctum',
 
     'models' => [
 

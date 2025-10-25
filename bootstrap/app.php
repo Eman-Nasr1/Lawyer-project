@@ -14,11 +14,17 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withProviders([
         App\Modules\Specialties\Providers\SpecialtiesServiceProvider::class,
         App\Modules\LegalDecisions\Providers\LegalDecisionsServiceProvider::class,
+        App\Modules\Lawyer\Providers\LawyerAvailabilitiesServiceProvider::class,  
+        App\Modules\Appointments\Providers\AppointmentsServiceProvider::class,
+        App\Modules\Favorites\Providers\FavoritesServiceProvider::class,
+        App\Modules\Reviews\Providers\ReviewsServiceProvider::class,
+      
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'auth.admin' => \App\Http\Middleware\AdminAuthenticate::class,
+                
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -34,4 +34,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(\App\Models\Lawyer::class, 'user_id');
     }
+    public function company()
+{
+    return $this->hasOne(Company::class, 'user_id');
+}
+
 }

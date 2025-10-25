@@ -43,4 +43,15 @@ class Lawyer extends Model
     {
         return $this->belongsToMany(Specialty::class, 'lawyer_specialty');
     }
+    public function addresses()
+    {
+        return $this->morphMany(Address::class, 'addressable');
+    }
+    public function primaryAddress()
+    {
+        return $this->morphOne(Address::class, 'addressable')->where('is_primary', true);
+    }
+    public function favorites(){ return $this->morphMany(\App\Models\Favorite::class, 'favoritable'); }
+public function reviews(){ return $this->morphMany(\App\Models\Review::class, 'reviewable'); }
+
 }

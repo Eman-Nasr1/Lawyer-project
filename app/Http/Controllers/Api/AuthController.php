@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
 use App\Models\User;
 use App\Models\Lawyer;
 use App\Models\Specialty;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -20,48 +22,50 @@ class AuthController extends Controller
      * - لو lawyer: بيعمل سجل في جدول lawyers + يربط التخصصات (specialty_id أو specialties[])
      * - بيرجع token وبيانات المستخدم + علاقاته
      */
+
     public function register(Request $request)
     {
         // قواعد عامة
         $baseRules = [
-            'name'     => ['required','string','max:190'],
-            'email'    => ['required','email','unique:users,email'],
-            'phone'    => ['nullable','string','max:50','unique:users,phone'],
+            'name'     => ['required', 'string', 'max:190'],
+            'email'    => ['required', 'email', 'unique:users,email'],
+            'phone'    => ['nullable', 'string', 'max:50', 'unique:users,phone'],
             'password' => ['required', Password::min(8)->mixedCase()->numbers()],
-            'role'     => ['nullable','in:admin,lawyer,client'],
-            'avatar'   => ['nullable','image','mimes:jpg,jpeg,png','max:2048'],
+            'role'     => ['nullable', 'in:lawyer,client,company'],
+            'avatar'   => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:2048'],
         ];
 
-        // قواعد إضافية لدور المحامي
+        // قواعد المحامي
         $lawyerRules = [
-            'professional_card_image' => ['nullable','image','mimes:jpg,jpeg,png','max:4096'],
-            'years_of_experience'     => ['nullable','integer','min:0','max:100'],
-            'bio'                     => ['nullable','string'],
-
-            // تخصص واحد أو متعدد
-            'specialty_id'            => ['nullable','integer','exists:specialties,id'],
-            'specialties'             => ['nullable','array','min:1'],
-            'specialties.*'           => ['integer','exists:specialties,id'],
+            'professional_card_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:4096'],
+            'years_of_experience'     => ['nullable', 'integer', 'min:0', 'max:100'],
+            'bio'                     => ['nullable', 'string'],
+            'specialty_id'            => ['nullable', 'integer', 'exists:specialties,id'],
+            'specialties'             => ['nullable', 'array', 'min:1'],
+            'specialties.*'           => ['integer', 'exists:specialties,id'],
         ];
 
+        // قواعد الشركة (بدون name/address/city/lat/lng)
+        $companyRules = [
+            'company_logo'   => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:4096'],
+            'company_phone'  => ['nullable', 'string', 'max:50'],
+            'company_email'  => ['nullable', 'email', 'max:190'],
+            'description'    => ['nullable', 'string'],
+        ];
+
+        $role  = $request->input('role', 'client');
         $rules = $baseRules;
-        if ($request->input('role') === 'lawyer') {
+        if ($role === 'lawyer') {
             $rules = array_merge($rules, $lawyerRules);
+        }
+        if ($role === 'company') {
+            $rules = array_merge($rules, $companyRules);
         }
 
         $data = $request->validate($rules);
 
-        // منع تسجيل أدمن من API العام
-        if (($data['role'] ?? 'client') === 'admin') {
-            return response()->json([
-                'status'  => 'fail',
-                'message' => 'Admin registration is not allowed from this endpoint.'
-            ], 403);
-        }
-
-        // رفع الملفات (تخزين المسارات فقط)
-        $avatarPath = null;
-        $cardPath   = null;
+        // رفع الملفات خارج الترانزاكشن
+        $avatarPath = $cardPath = $logoPath = null;
 
         try {
             if ($request->hasFile('avatar')) {
@@ -70,26 +74,28 @@ class AuthController extends Controller
             if ($request->hasFile('professional_card_image')) {
                 $cardPath = $request->file('professional_card_image')->store('lawyers/cards', 'public');
             }
+            if ($request->hasFile('company_logo')) {
+                $logoPath = $request->file('company_logo')->store('companies/logos', 'public');
+            }
 
-            // تنفيذ كل خطوات الإنشاء داخل Transaction
-            $user = DB::transaction(function () use ($data, $avatarPath, $cardPath) {
-                // 1) إنشاء المستخدم
+            $user = DB::transaction(function () use ($data, $avatarPath, $cardPath, $logoPath, $role) {
+                // 1) User
                 $user = User::create([
                     'name'     => $data['name'],
                     'email'    => $data['email'],
                     'phone'    => $data['phone'] ?? null,
                     'password' => Hash::make($data['password']),
-                    'type'     => $data['role'] ?? 'client',
+                    'type'     => $role,
                     'avatar'   => $avatarPath,
                 ]);
 
-                // 2) إسناد الدور (Spatie) إن وجد
+                // 2) Spatie Role
                 if (method_exists($user, 'assignRole')) {
-                    $user->assignRole($data['role'] ?? 'client');
+                    $user->assignRole($role);
                 }
 
-                // 3) إن كان محامي: أنشئ الملف وأربط التخصصات
-                if (($data['role'] ?? 'client') === 'lawyer') {
+                // 3) Lawyer
+                if ($role === 'lawyer') {
                     $lawyer = Lawyer::create([
                         'user_id'                 => $user->id,
                         'professional_card_image' => $cardPath,
@@ -97,35 +103,59 @@ class AuthController extends Controller
                         'bio'                     => $data['bio'] ?? null,
                     ]);
 
-                    // IDs من specialty_id أو specialties[]
                     $specialtyIds = [];
                     if (!empty($data['specialties']) && is_array($data['specialties'])) {
                         $specialtyIds = $data['specialties'];
                     } elseif (!empty($data['specialty_id'])) {
                         $specialtyIds = [(int) $data['specialty_id']];
                     }
-
                     if (!empty($specialtyIds)) {
                         $lawyer->specialties()->sync($specialtyIds);
                     }
                 }
 
+                // 4) Company (بدون اسم/عنوان)
+                if ($role === 'company') {
+                    Company::create([
+                        'user_id'     => $user->id,
+                        'slug'        => Str::slug($user->name) . '-' . $user->id, // لتفادي التعارض
+                        'logo'        => $logoPath,
+                        'phone'       => $data['company_phone'] ?? null,
+                        'email'       => $data['company_email'] ?? null,
+                        'description' => $data['description'] ?? null,
+                        'is_approved' => false,
+                    ]);
+                }
+
                 return $user;
             });
-
         } catch (\Throwable $e) {
-            // لو الـ Transaction فشل ننظف الملفات المرفوعة
             if ($avatarPath) Storage::disk('public')->delete($avatarPath);
             if ($cardPath)   Storage::disk('public')->delete($cardPath);
+            if ($logoPath)   Storage::disk('public')->delete($logoPath);
             throw $e;
         }
 
-        // إنشاء توكن Sanctum
         $token = $user->createToken('api', ['*'])->plainTextToken;
+        $user->load('roles', 'permissions', 'lawyer.specialties', 'company'); // العناوين هتتجاب من endpoints منفصلة
 
-        // تحميل العلاقات للرد (هيتضمن avatar_url & professional_card_image_url من الـ Accessors)
-        $user->load('roles','permissions','lawyer.specialties');
-
+        try {
+            $verification = \App\Http\Controllers\Api\PasswordOtpController::sendOtpFor($user, 'verify', 'email'); // أو 'phone'
+            return response()->json([
+                'status'  => 'pending_verification',
+                'message' => 'Registration successful. Please verify using the OTP sent to your email.',
+                'data'    => [
+                    'user' => $user,
+                    'verification' => $verification
+                ]
+            ], 201);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'status'  => 'success_but_otp_delayed',
+                'message' => $e->getMessage(),
+                'data'    => ['user' => $user]
+            ], 201);
+        }
         return response()->json([
             'status' => 'success',
             'data'   => [
@@ -142,8 +172,8 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email'    => ['required','email'],
-            'password' => ['required','string'],
+            'email'    => ['required', 'email'],
+            'password' => ['required', 'string'],
         ]);
 
         $user = User::where('email', $credentials['email'])->first();
@@ -157,7 +187,7 @@ class AuthController extends Controller
 
         $token = $user->createToken('api', ['*'])->plainTextToken;
 
-        $user->load('roles','permissions','lawyer.specialties');
+        $user->load('roles', 'permissions', 'lawyer.specialties');
 
         return response()->json([
             'status' => 'success',
@@ -175,7 +205,7 @@ class AuthController extends Controller
      */
     public function me(Request $request)
     {
-        $user = $request->user()->load('roles','permissions','lawyer.specialties');
+        $user = $request->user()->load('roles', 'permissions', 'lawyer.specialties');
         return response()->json([
             'status' => 'success',
             'data'   => ['user' => $user],
