@@ -18,7 +18,7 @@
   <div class="col-md-6 mb-3">
       <label class="form-label">Type <span class="text-danger">*</span></label>
       <select name="type" class="form-select" required>
-          @foreach(['admin'=>'Admin','lawyer'=>'Lawyer','client'=>'Client'] as $k=>$v)
+          @foreach(['admin'=>'Admin','lawyer'=>'Lawyer','client'=>'Client','company'=>'Company'] as $k=>$v)
               <option value="{{ $k }}" @selected(old('type', $user->type ?? '')==$k)>{{ $v }}</option>
           @endforeach
       </select>

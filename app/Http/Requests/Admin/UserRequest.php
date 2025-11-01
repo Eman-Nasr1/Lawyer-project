@@ -18,7 +18,7 @@ class UserRequest extends FormRequest
             'name'  => ['required','string','max:255'],
             'email' => ['required','email','max:255','unique:users,email'.($id?",$id":'')],
             'password' => $pass,
-            'type' => ['required','in:admin,lawyer,client'],
+            'type' => ['required','in:admin,lawyer,client,company'],
             'roles' => ['array'],
             'roles.*' => ['integer','exists:roles,id'],
         ];

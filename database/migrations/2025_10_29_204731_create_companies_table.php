@@ -10,19 +10,8 @@ return new class extends Migration {
             $table->id();
 
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete(); // مالك الشركة/المسؤول
-            $table->string('name');
-            $table->string('slug')->unique();
-
-            $table->string('logo')->nullable();
-
-            $table->string('city')->nullable();
-            $table->string('address')->nullable();
-
-            $table->decimal('lat', 10, 7)->nullable();
-            $table->decimal('lng', 10, 7)->nullable();
-
-            $table->string('phone')->nullable();
-            $table->string('email')->nullable();
+            $table->string('professional_card_image')->nullable();
+            $table->unsignedSmallInteger('years_of_experience')->default(0);
 
             $table->text('description')->nullable();
 
@@ -34,7 +23,7 @@ return new class extends Migration {
 
             $table->timestamps();
 
-            $table->index(['user_id', 'city']);
+            $table->index(['user_id']);
         });
     }
 

@@ -7,11 +7,8 @@ class Company extends Model
 {
     protected $fillable = [
         'user_id',
-        'slug',
-        'logo',
-        // 'city', 'address', 'lat', 'lng',  // تم نقلهم لجدول addresses
-        'phone',
-        'email',
+        'professional_card_image',
+        'years_of_experience',
         'description',
         'avg_rating',
         'reviews_count',
@@ -28,6 +25,12 @@ class Company extends Model
     public function lawyers()
     {
         return $this->hasMany(Lawyer::class);
+    }
+
+    // 👈 العلاقة المطلوبة (Many-to-Many) مع specialties
+    public function specialties()
+    {
+        return $this->belongsToMany(Specialty::class, 'company_specialty');
     }
 
     // عناوين الشركة (polymorphic)

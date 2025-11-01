@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         App\Modules\Appointments\Providers\AppointmentsServiceProvider::class,
         App\Modules\Favorites\Providers\FavoritesServiceProvider::class,
         App\Modules\Reviews\Providers\ReviewsServiceProvider::class,
+        App\Modules\Addresses\Providers\AddressesServiceProvider::class,
       
     ])
     ->withMiddleware(function (Middleware $middleware): void {

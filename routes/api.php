@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\PasswordOtpController;
+use App\Http\Controllers\Api\SearchController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -16,6 +17,13 @@ Route::prefix('auth')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
     });
 });
+
+// Search and Experience endpoints
+Route::get('most-experienced-lawyers', [SearchController::class, 'mostExperiencedLawyers']);
+Route::get('most-experienced-companies', [SearchController::class, 'mostExperiencedCompanies']);
+Route::get('highest-rated-lawyers', [SearchController::class, 'highestRatedLawyers']);
+Route::get('highest-rated-companies', [SearchController::class, 'highestRatedCompanies']);
+Route::match(['get', 'post'], 'search', [SearchController::class, 'search']);
 
 // مثال على حماية أي APIs تانية:
 Route::middleware('auth:sanctum')->get('/protected-check', function () {

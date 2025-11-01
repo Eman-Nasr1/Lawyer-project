@@ -47,10 +47,12 @@ class AuthController extends Controller
 
         // قواعد الشركة (بدون name/address/city/lat/lng)
         $companyRules = [
-            'company_logo'   => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:4096'],
-            'company_phone'  => ['nullable', 'string', 'max:50'],
-            'company_email'  => ['nullable', 'email', 'max:190'],
+            'professional_card_image' => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:4096'],
+            'years_of_experience'     => ['nullable', 'integer', 'min:0', 'max:100'],
             'description'    => ['nullable', 'string'],
+            'specialty_id'            => ['nullable', 'integer', 'exists:specialties,id'],
+            'specialties'             => ['nullable', 'array', 'min:1'],
+            'specialties.*'           => ['integer', 'exists:specialties,id'],
         ];
 
         $role  = $request->input('role', 'client');
@@ -65,7 +67,7 @@ class AuthController extends Controller
         $data = $request->validate($rules);
 
         // رفع الملفات خارج الترانزاكشن
-        $avatarPath = $cardPath = $logoPath = null;
+        $avatarPath = $cardPath = null;
 
         try {
             if ($request->hasFile('avatar')) {
@@ -74,11 +76,8 @@ class AuthController extends Controller
             if ($request->hasFile('professional_card_image')) {
                 $cardPath = $request->file('professional_card_image')->store('lawyers/cards', 'public');
             }
-            if ($request->hasFile('company_logo')) {
-                $logoPath = $request->file('company_logo')->store('companies/logos', 'public');
-            }
 
-            $user = DB::transaction(function () use ($data, $avatarPath, $cardPath, $logoPath, $role) {
+            $user = DB::transaction(function () use ($data, $avatarPath, $cardPath, $role) {
                 // 1) User
                 $user = User::create([
                     'name'     => $data['name'],
@@ -116,15 +115,23 @@ class AuthController extends Controller
 
                 // 4) Company (بدون اسم/عنوان)
                 if ($role === 'company') {
-                    Company::create([
-                        'user_id'     => $user->id,
-                        'slug'        => Str::slug($user->name) . '-' . $user->id, // لتفادي التعارض
-                        'logo'        => $logoPath,
-                        'phone'       => $data['company_phone'] ?? null,
-                        'email'       => $data['company_email'] ?? null,
-                        'description' => $data['description'] ?? null,
-                        'is_approved' => false,
+                    $company = Company::create([
+                        'user_id'                 => $user->id,
+                        'professional_card_image' => $cardPath,
+                        'years_of_experience'     => isset($data['years_of_experience']) ? (int)$data['years_of_experience'] : 0,
+                        'description'             => $data['description'] ?? null,
+                        'is_approved'             => false,
                     ]);
+
+                    $specialtyIds = [];
+                    if (!empty($data['specialties']) && is_array($data['specialties'])) {
+                        $specialtyIds = $data['specialties'];
+                    } elseif (!empty($data['specialty_id'])) {
+                        $specialtyIds = [(int) $data['specialty_id']];
+                    }
+                    if (!empty($specialtyIds)) {
+                        $company->specialties()->sync($specialtyIds);
+                    }
                 }
 
                 return $user;
@@ -132,12 +139,11 @@ class AuthController extends Controller
         } catch (\Throwable $e) {
             if ($avatarPath) Storage::disk('public')->delete($avatarPath);
             if ($cardPath)   Storage::disk('public')->delete($cardPath);
-            if ($logoPath)   Storage::disk('public')->delete($logoPath);
             throw $e;
         }
 
         $token = $user->createToken('api', ['*'])->plainTextToken;
-        $user->load('roles', 'permissions', 'lawyer.specialties', 'company'); // العناوين هتتجاب من endpoints منفصلة
+        $user->load('roles', 'permissions', 'lawyer.specialties', 'company.specialties'); // العناوين هتتجاب من endpoints منفصلة
 
         try {
             $verification = \App\Http\Controllers\Api\PasswordOtpController::sendOtpFor($user, 'verify', 'email'); // أو 'phone'
@@ -187,7 +193,7 @@ class AuthController extends Controller
 
         $token = $user->createToken('api', ['*'])->plainTextToken;
 
-        $user->load('roles', 'permissions', 'lawyer.specialties');
+        $user->load('roles', 'permissions', 'lawyer.specialties', 'company.specialties');
 
         return response()->json([
             'status' => 'success',
@@ -205,7 +211,7 @@ class AuthController extends Controller
      */
     public function me(Request $request)
     {
-        $user = $request->user()->load('roles', 'permissions', 'lawyer.specialties');
+        $user = $request->user()->load('roles', 'permissions', 'lawyer.specialties', 'company.specialties');
         return response()->json([
             'status' => 'success',
             'data'   => ['user' => $user],

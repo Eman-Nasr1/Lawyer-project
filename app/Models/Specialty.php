@@ -15,4 +15,9 @@ class Specialty extends Model
     {
         return $this->belongsToMany(Lawyer::class, 'lawyer_specialty');
     }
+
+    public function companies()
+    {
+        return $this->belongsToMany(Company::class, 'company_specialty');
+    }
 }

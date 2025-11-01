@@ -360,6 +360,18 @@ return [
         'icon'  => 'fas fa-users',
         'active' => ['admin/users*'],
     ],
+    [
+        'text'  => 'Lawyers',
+        'route' => 'admin.lawyers.index',
+        'icon'  => 'fas fa-gavel',
+        'active' => ['admin/lawyers*'],
+    ],
+    [
+        'text'  => 'Companies',
+        'route' => 'admin.companies.index',
+        'icon'  => 'fas fa-building',
+        'active' => ['admin/companies*'],
+    ],
     // 👇 باقي الإعدادات كما كانت
     ['header' => 'account_settings'],
     [
