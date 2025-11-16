@@ -18,6 +18,10 @@ class StoreAppointmentRequest extends FormRequest
             'end_time'   => 'required|date_format:H:i|after:start_time',
             'notes'      => 'nullable|string|max:2000',
             'attachments'=> 'nullable|string',
+            'files'      => 'nullable|array|max:10',
+            'files.*'    => 'file|max:5120|mimes:pdf,jpg,jpeg,png,doc,docx',
+            'names'      => 'nullable|array',
+            'names.*'    => 'nullable|string|max:255',
         ];
     }
 }

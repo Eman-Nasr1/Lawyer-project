@@ -27,7 +27,21 @@ class AppointmentClientController extends Controller
     {
         $userId = $request->user()->id;
         try {
-            $created = $this->service->createForClient($request->validated(), $userId);
+            $validated = $request->validated();
+            $files = $request->file('files');
+            $names = $request->input('names', null);
+            
+            // Remove files and names from validated data before creating appointment
+            unset($validated['files'], $validated['names']);
+            
+            $created = $this->service->createForClient($validated, $userId);
+            
+            // Attach files if provided
+            if ($files && count($files) > 0) {
+                $this->service->attachFiles($created->id, $userId, $files, $names);
+                $created->refresh()->load('files'); // Refresh and load files relationship
+            }
+            
             return response()->json($created, 201);
         } catch (\RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);

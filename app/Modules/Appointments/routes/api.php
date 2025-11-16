@@ -9,8 +9,7 @@ Route::prefix('api')->middleware('api')->group(function () {
     // العميل
     Route::middleware(['auth:sanctum', 'role:client'])->prefix('client')->group(function () {
         Route::get('appointments', [AppointmentClientController::class, 'index']);
-        Route::post('appointments', [AppointmentClientController::class, 'store']); // حجز جديد
-        Route::post('appointments/{id}/files', [AppointmentClientController::class, 'uploadFiles']);
+        Route::post('appointments', [AppointmentClientController::class, 'store']); // حجز جديد مع ملفات
 
         // إلغاء ميعاد + سبب
         Route::post('appointments/{id}/cancel', [AppointmentClientController::class, 'cancel']);

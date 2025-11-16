@@ -59,7 +59,10 @@ class AppointmentService
         $this->repo->updateStatus($appointmentId, 'cancelled');
         $this->repo->logCancellation($appointmentId, $byUserId, $reason);
 
-        return $this->repo->find($appointmentId);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'تم الإلغاء بنجاح'
+        ], 200);
     }
 
     public function updateStatusByLawyer(int $appointmentId, string $status, int $lawyerId): \App\Models\Appointment
