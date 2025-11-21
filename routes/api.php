@@ -25,6 +25,9 @@ Route::get('highest-rated-lawyers', [SearchController::class, 'highestRatedLawye
 Route::get('highest-rated-companies', [SearchController::class, 'highestRatedCompanies']);
 Route::match(['get', 'post'], 'search', [SearchController::class, 'search']);
 
+// Contact Us API
+Route::post('contact-us', [\App\Http\Controllers\Api\ContactUsController::class, 'store']);
+
 // مثال على حماية أي APIs تانية:
 Route::middleware('auth:sanctum')->get('/protected-check', function () {
     return ['ok' => true];

@@ -27,7 +27,7 @@ Route::prefix('admin')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard.index');
     });
 });
-Route::middleware(['web','auth','role:admin'])
+Route::middleware(['web','auth','role:admin','admin.locale'])
     ->prefix('admin')->name('admin.')
     ->group(function () {
         Route::resource('users', UserController::class)->except(['show']);
@@ -48,4 +48,24 @@ Route::middleware(['web','auth','role:admin'])
         Route::put('companies/{company}/approve', [\App\Http\Controllers\Admin\CompanyController::class, 'approve'])->name('companies.approve');
         Route::put('companies/{company}/reject', [\App\Http\Controllers\Admin\CompanyController::class, 'reject'])->name('companies.reject');
         Route::delete('companies/{company}', [\App\Http\Controllers\Admin\CompanyController::class, 'destroy'])->name('companies.destroy');
+        
+        // Static Pages Management
+        Route::resource('static-pages', \App\Http\Controllers\Admin\StaticPageController::class);
+        
+        // Sites Management
+        Route::resource('sites', \App\Http\Controllers\Admin\SiteController::class)->except(['show']);
+        
+        // Clients Management
+        Route::resource('clients', \App\Http\Controllers\Admin\ClientController::class)->except(['show']);
+        
+        // Countries Management
+        Route::resource('countries', \App\Http\Controllers\Admin\CountryController::class)->except(['show']);
+        
+        // Cities Management
+        Route::resource('cities', \App\Http\Controllers\Admin\CityController::class)->except(['show']);
+        
+        // Contact Messages Management
+        Route::get('contact-messages', [\App\Http\Controllers\Admin\ContactMessageController::class, 'index'])->name('contact-messages.index');
+        Route::get('contact-messages/{contactMessage}', [\App\Http\Controllers\Admin\ContactMessageController::class, 'show'])->name('contact-messages.show');
+        Route::delete('contact-messages/{contactMessage}', [\App\Http\Controllers\Admin\ContactMessageController::class, 'destroy'])->name('contact-messages.destroy');
     });

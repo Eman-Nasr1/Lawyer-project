@@ -158,6 +158,7 @@ return [
     'layout_fixed_navbar' => null,
     'layout_fixed_footer' => null,
     'layout_dark_mode' => null,
+    'layout_rtl' => true, // Enable RTL layout
 
     /*
     |--------------------------------------------------------------------------
@@ -300,11 +301,11 @@ return [
 
 'menu' => [
     // Navbar items:
-    [
-        'type' => 'navbar-search',
-        'text' => 'search',
-        'topnav_right' => true,
-    ],
+    // [
+    //     'type' => 'navbar-search',
+    //     'text' => 'search',
+    //     'topnav_right' => true,
+    // ],
     // [
     //     'type' => 'fullscreen-widget',
     //     'topnav_right' => true,
@@ -320,13 +321,13 @@ return [
     //     'url' => 'admin/blog',
     //     'can' => 'manage-blog',
     // ],
-    [
-        'text' => 'pages',
-        'url' => 'admin/pages',
-        'icon' => 'far fa-fw fa-file',
-        'label' => 4,
-        'label_color' => 'success',
-    ],
+    // [
+    //     'text' => 'pages',
+    //     'url' => 'admin/pages',
+    //     'icon' => 'far fa-fw fa-file',
+    //     'label' => 4,
+    //     'label_color' => 'success',
+    // ],
 
     // 👇 قسم جديد للتخصصات
     ['header' => 'management'],
@@ -337,13 +338,13 @@ return [
         'active' => ['admin/specialties*'],
     ],
     [
-        'text'  => 'الفئات',
+        'text'  => 'أنواع قرارات التميز',
         'route' => 'admin.legal.categories.index',
         'icon'  => 'fas fa-list',
         'active' => ['admin/legal/categories*'],
     ],
     [
-        'text'  => 'القرارات',
+        'text'  => 'قرارات التميز',
         'route' => 'admin.legal.decisions.index',
         'icon'  => 'fas fa-balance-scale',
         'active' => ['admin/legal/decisions*'],
@@ -371,6 +372,45 @@ return [
         'route' => 'admin.companies.index',
         'icon'  => 'fas fa-building',
         'active' => ['admin/companies*'],
+    ],
+    [
+        'text'  => 'العملاء',
+        'route' => 'admin.clients.index',
+        'icon'  => 'fas fa-user-friends',
+        'active' => ['admin/clients*'],
+    ],
+    ['header' => 'content_management'],
+    [
+        'text'  => 'الصفحات الثابتة',
+        'route' => 'admin.static-pages.index',
+        'icon'  => 'fas fa-file-alt',
+        'active' => ['admin/static-pages*'],
+    ],
+    [
+        'text'  => 'المواقع المهمة',
+        'route' => 'admin.sites.index',
+        'icon'  => 'fas fa-link',
+        'active' => ['admin/sites*'],
+    ],
+    ['header' => 'location_management'],
+    [
+        'text'  => 'الدول',
+        'route' => 'admin.countries.index',
+        'icon'  => 'fas fa-globe',
+        'active' => ['admin/countries*'],
+    ],
+    [
+        'text'  => 'المدن',
+        'route' => 'admin.cities.index',
+        'icon'  => 'fas fa-city',
+        'active' => ['admin/cities*'],
+    ],
+    ['header' => 'communications'],
+    [
+        'text'  => 'رسائل التواصل',
+        'route' => 'admin.contact-messages.index',
+        'icon'  => 'fas fa-envelope',
+        'active' => ['admin/contact-messages*'],
     ],
     // 👇 باقي الإعدادات كما كانت
     // ['header' => 'account_settings'],
