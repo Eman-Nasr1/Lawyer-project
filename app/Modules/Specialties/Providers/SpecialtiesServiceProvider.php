@@ -19,7 +19,7 @@ class SpecialtiesServiceProvider extends ServiceProvider
         // تحميل راوتات الموديول
        
         $this->loadRoutesFrom(__DIR__ . '/../Routes/admin.php');
-
+        $this->loadRoutesFrom(__DIR__ . '/../Routes/api.php');
         // لو فيه فيوز/ترجمة:
         // $this->loadViewsFrom(__DIR__.'/../Resources/views', 'specialties');
         // $this->loadMigrationsFrom(__DIR__.'/../Database/migrations');
