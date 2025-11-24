@@ -32,3 +32,4 @@
 </button>
 <a href="{{ route('admin.cities.index') }}" class="btn btn-secondary">إلغاء</a>
 
+

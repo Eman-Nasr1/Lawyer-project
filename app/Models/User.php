@@ -27,7 +27,10 @@ class User extends Authenticatable
     // (اختياري) لو كنتِ عاملة Accessor للصورة
     protected $appends = ['avatar_url'];
     public function getAvatarUrlAttribute() {
-        return $this->avatar ? Storage::url($this->avatar) : null;
+        if (!$this->avatar) {
+            return null;
+        }
+        return Storage::disk('public')->url($this->avatar);
     }
 
     public function lawyer()

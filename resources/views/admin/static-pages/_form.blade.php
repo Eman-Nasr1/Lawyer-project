@@ -31,3 +31,4 @@
 </button>
 <a href="{{ route('admin.static-pages.index') }}" class="btn btn-secondary">إلغاء</a>
 
+
