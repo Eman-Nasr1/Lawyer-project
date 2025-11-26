@@ -28,9 +28,11 @@ class Lawyer extends Model
 
     public function getProfessionalCardImageUrlAttribute()
     {
-        return $this->professional_card_image
-            ? Storage::url($this->professional_card_image)
-            : null;
+        if (!$this->professional_card_image) {
+            return null;
+        }
+    
+        return Storage::disk('public')->url($this->professional_card_image);
     }
 
     public function user()

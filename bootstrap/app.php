@@ -19,7 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
         App\Modules\Favorites\Providers\FavoritesServiceProvider::class,
         App\Modules\Reviews\Providers\ReviewsServiceProvider::class,
         App\Modules\Addresses\Providers\AddressesServiceProvider::class,
-      
+        App\Modules\Sliders\Providers\SlidersServiceProvider::class,
+        App\Modules\ImportantSites\Providers\ImportantSitesServiceProvider::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([

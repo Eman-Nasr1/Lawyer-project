@@ -388,10 +388,17 @@ return [
     ],
     [
         'text'  => 'المواقع المهمة',
-        'route' => 'admin.sites.index',
+        'route' => 'admin.important-sites.index',
         'icon'  => 'fas fa-link',
-        'active' => ['admin/sites*'],
+        'active' => ['admin/important-sites*'],
     ],
+    [
+        'text'  => 'سلايدر',
+        'route' => 'admin.sliders.index',
+        'icon'  => 'fas fa-image',
+        'active' => ['admin/sliders*'],
+    ],
+   
     ['header' => 'location_management'],
     [
         'text'  => 'الدول',

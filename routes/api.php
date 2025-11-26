@@ -19,14 +19,29 @@ Route::prefix('auth')->group(function () {
 });
 
 // Search and Experience endpoints
-Route::get('most-experienced-lawyers', [SearchController::class, 'mostExperiencedLawyers']);
-Route::get('most-experienced-companies', [SearchController::class, 'mostExperiencedCompanies']);
-Route::get('highest-rated-lawyers', [SearchController::class, 'highestRatedLawyers']);
-Route::get('highest-rated-companies', [SearchController::class, 'highestRatedCompanies']);
-Route::match(['get', 'post'], 'search', [SearchController::class, 'search']);
 
-// Contact Us API
-Route::post('contact-us', [\App\Http\Controllers\Api\ContactUsController::class, 'store']);
+
+// Dashboard APIs
+
+
+// Public Dashboard APIs (no authentication required)
+
+// Protected APIs (authentication required)
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('most-experienced-lawyers', [SearchController::class, 'mostExperiencedLawyers']);
+    Route::get('most-experienced-companies', [SearchController::class, 'mostExperiencedCompanies']);
+    Route::get('highest-rated-lawyers', [SearchController::class, 'highestRatedLawyers']);
+    Route::get('highest-rated-companies', [SearchController::class, 'highestRatedCompanies']);
+    Route::match(['get', 'post'], 'search', [SearchController::class, 'search']);
+
+    // Contact Us API
+    Route::post('contact-us', [\App\Http\Controllers\Api\ContactUsController::class, 'store']);
+    Route::get('static-pages', [\App\Http\Controllers\Api\StaticPagesController::class, 'index']);
+    Route::get('static-pages/{id}', [\App\Http\Controllers\Api\StaticPagesController::class, 'show']);
+    Route::get('cities', [\App\Http\Controllers\Api\CitiesController::class, 'index']);
+    Route::get('legal-decisions', [\App\Http\Controllers\Api\LegalDecisionsController::class, 'index']);
+    Route::get('sliders', [\App\Modules\Sliders\Controllers\Api\SliderApiController::class, 'index']);
+});
 
 // مثال على حماية أي APIs تانية:
 Route::middleware('auth:sanctum')->get('/protected-check', function () {
