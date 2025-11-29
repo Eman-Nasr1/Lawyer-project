@@ -27,11 +27,12 @@ class FavoriteRepository implements FavoriteRepositoryInterface
 
     public function remove(int $userId, string $type, int $id): void
     {
-        Favorite::where('user_id',$userId)
-            ->where('favoritable_type',$type)
-            ->where('favoritable_id',$id)
-            ->delete();
+        Favorite::where('user_id', $userId)
+            ->where('favoritable_type', $type)
+            ->where('favoritable_id', $id)
+            ->delete();   // دلوقتى ده Hard delete لأنه مفيش SoftDeletes
     }
+    
 
     public function listForUser(int $userId, int $perPage = 15): LengthAwarePaginator
     {

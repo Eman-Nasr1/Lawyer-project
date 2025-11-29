@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Favorite extends Model
 {
-    use SoftDeletes;
+   
 
     protected $fillable = ['user_id','favoritable_type','favoritable_id'];
 

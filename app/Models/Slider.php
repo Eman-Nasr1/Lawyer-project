@@ -24,6 +24,7 @@ class Slider extends Model
         'sort_order' => 'integer',
     ];
 
+  
     protected $appends = ['image_url'];
 
     public function getImageUrlAttribute()
@@ -31,8 +32,9 @@ class Slider extends Model
         if (!$this->image) {
             return null;
         }
-    
-        return Storage::url('sliders/' . $this->image);
+
+        // هنا المهم 👉 disk('public')
+        return Storage::disk('public')->url('sliders/' . $this->image);
     }
     
 
