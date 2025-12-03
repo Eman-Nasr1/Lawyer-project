@@ -1,10 +1,12 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage; 
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Factories\HasFactory;  
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
 class Company extends Model
 {
     use HasFactory;
@@ -25,9 +27,13 @@ class Company extends Model
         return $this->belongsTo(User::class, 'user_id');
     }
 
+    // app/Models/Company.php
+
     public function lawyers()
     {
-        return $this->hasMany(Lawyer::class);
+        return $this->belongsToMany(\App\Models\Lawyer::class, 'company_lawyer')
+            ->withPivot('title', 'is_primary')
+            ->withTimestamps();
     }
 
     // 👈 العلاقة المطلوبة (Many-to-Many) مع specialties
@@ -42,7 +48,7 @@ class Company extends Model
         if (!$this->professional_card_image) {
             return null;
         }
-    
+
         return Storage::disk('public')->url($this->professional_card_image);
     }
 
@@ -58,16 +64,27 @@ class Company extends Model
     }
 
     /* Scopes */
-    public function scopeApproved($q)  { return $q->where('is_approved', true); }
-    public function scopeFeatured($q)  { return $q->where('is_featured', true); }
+    public function scopeApproved($q)
+    {
+        return $q->where('is_approved', true);
+    }
+    public function scopeFeatured($q)
+    {
+        return $q->where('is_featured', true);
+    }
 
     /* Helpers */
     public function getLogoUrlAttribute(): ?string
     {
-        return $this->logo ? asset('storage/'.$this->logo) : null;
+        return $this->logo ? asset('storage/' . $this->logo) : null;
     }
     // app/Models/Company.php
-public function favorites() { return $this->morphMany(\App\Models\Favorite::class, 'favoritable'); }
-public function reviews()   { return $this->morphMany(\App\Models\Review::class, 'reviewable'); }
-
+    public function favorites()
+    {
+        return $this->morphMany(\App\Models\Favorite::class, 'favoritable');
+    }
+    public function reviews()
+    {
+        return $this->morphMany(\App\Models\Review::class, 'reviewable');
+    }
 }

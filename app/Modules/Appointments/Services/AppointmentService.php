@@ -12,20 +12,40 @@ use Illuminate\Support\Facades\Storage;
 class AppointmentService
 {
     public function __construct(private AppointmentRepositoryInterface $repo) {}
-
     public function createForClient(array $data, int $userId): \App\Models\Appointment
     {
         $data['user_id'] = $userId;
         $data['status']  = 'pending';
-
-        if (!$this->isWithinAvailability($data['lawyer_id'], $data['date'], $data['start_time'], $data['end_time'])) {
-            throw new RuntimeException('Selected time is outside lawyer availability.');
+    
+        $lawyerId  = $data['lawyer_id']  ?? null;
+        $companyId = $data['company_id'] ?? null;
+    
+        if (!$lawyerId && !$companyId) {
+            throw new RuntimeException('You must select a lawyer or a company.');
         }
-        $this->assertNoOverlapWithAppointments($data['lawyer_id'], $data['date'], $data['start_time'], $data['end_time']);
-
+    
+        // لو فيه محامي → نطبق الـ availability + overlap
+        if ($lawyerId) {
+            if (!$this->isWithinAvailability($lawyerId, $data['date'], $data['start_time'], $data['end_time'])) {
+                throw new RuntimeException('Selected time is outside lawyer availability.');
+            }
+    
+            $this->assertNoOverlapWithAppointments(
+                $lawyerId,
+                $data['date'],
+                $data['start_time'],
+                $data['end_time']
+            );
+        }
+    
+        // مهم عشان نضمن إن المفاتيح موجودة في الـ array
+        $data['lawyer_id']  = $lawyerId;   // هتبقى null لو مفيش محامي
+        $data['company_id'] = $companyId;  // أو id لو موجود
+    
         return $this->repo->create($data);
     }
-
+    
+    
     public function attachFiles(int $appointmentId, int $uploaderId, array $files, ?array $names = null)
     {
         $rows = [];
@@ -96,4 +116,53 @@ class AppointmentService
         foreach ($booked as $b) if (!($e <= $b->start_time || $s >= $b->end_time))
             throw new RuntimeException('Selected time overlaps with another appointment.');
     }
+    public function assignToLawyerByCompany(int $appointmentId, int $lawyerId, int $companyId)
+    {
+        // 1) نجيب الـ appointment ونتأكد إنه تابع للشركة
+        $appointment = $this->repo->findForCompany($appointmentId, $companyId);
+    
+        if (!$appointment) {
+            throw new \RuntimeException('Appointment does not belong to this company.');
+        }
+    
+        // 2) نتأكد إن المحامي تابع لنفس الشركة (من خلال الـ pivot company_lawyer)
+        $lawyer = \App\Models\Lawyer::where('id', $lawyerId)
+            ->whereHas('companies', function ($q) use ($companyId) {
+                $q->where('companies.id', $companyId);
+            })
+            ->first();
+    
+        if (!$lawyer) {
+            throw new \RuntimeException('Lawyer does not belong to this company.');
+        }
+    
+        // 3) نسند المحامي للميعاد
+        $appointment->lawyer_id = $lawyer->id;
+        $appointment->save();
+    
+        return $appointment->fresh();
+    }
+    public function updateStatusByCompany(int $appointmentId, string $status, int $companyId)
+{
+    // نتأكد أن الموعد تابع للشركة
+    $appointment = $this->repo->findForCompany($appointmentId, $companyId);
+
+    if (!$appointment) {
+        throw new RuntimeException('Appointment does not belong to this company.');
+    }
+
+    // ممكن تمنعي تعديل completed/cancelled
+    if (in_array($appointment->status, ['completed', 'cancelled'])) {
+        throw new RuntimeException('This appointment cannot be updated.');
+    }
+
+    // تعديل الحالة
+    $appointment->status = $status;
+    $appointment->save();
+
+    return $appointment->fresh();
+}
+
+    
+
 }

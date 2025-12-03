@@ -31,7 +31,7 @@ class Lawyer extends Model
         if (!$this->professional_card_image) {
             return null;
         }
-    
+
         return Storage::disk('public')->url($this->professional_card_image);
     }
 
@@ -53,7 +53,24 @@ class Lawyer extends Model
     {
         return $this->morphOne(Address::class, 'addressable')->where('is_primary', true);
     }
-    public function favorites(){ return $this->morphMany(\App\Models\Favorite::class, 'favoritable'); }
-public function reviews(){ return $this->morphMany(\App\Models\Review::class, 'reviewable'); }
+    public function favorites()
+    {
+        return $this->morphMany(\App\Models\Favorite::class, 'favoritable');
+    }
+    public function reviews()
+    {
+        return $this->morphMany(\App\Models\Review::class, 'reviewable');
+    }
 
+    public function company()
+    {
+        return $this->belongsTo(\App\Models\Company::class, 'company_id');
+    }
+
+    public function companies()
+    {
+        return $this->belongsToMany(\App\Models\Company::class, 'company_lawyer')
+            ->withPivot(['title', 'is_primary'])
+            ->withTimestamps();
+    }
 }

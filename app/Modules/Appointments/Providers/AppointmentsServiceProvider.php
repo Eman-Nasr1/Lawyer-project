@@ -10,6 +10,7 @@ class AppointmentsServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        
         $this->app->bind(AppointmentRepositoryInterface::class, AppointmentRepository::class);
     }
 
