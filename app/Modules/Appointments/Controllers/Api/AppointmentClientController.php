@@ -30,7 +30,7 @@ class AppointmentClientController extends Controller
     
         $appointments = $this->repo->paginateForClient($user->id, $perPage, $status);
     
-        $appointments->getCollection()->transform(function ($appointment) {
+        $transformedAppointments = $appointments->through(function ($appointment) {
             $lawyer  = $appointment->lawyer;
             $company = $appointment->company;
     
@@ -39,12 +39,17 @@ class AppointmentClientController extends Controller
             $providerAvatar = null;
             $providerTitle  = null;
             $address        = null;
+            $userId         = null;
+            $lawyerId       = null;
+            $companyId      = null;
     
             if ($lawyer && $lawyer->user) {
                 $providerType   = 'lawyer';
                 $providerName   = $lawyer->user->name;
                 $providerAvatar = $lawyer->user->avatar_url;
                 $providerTitle  = optional($lawyer->specialties->first())->name;
+                $userId         = $lawyer->user->id;
+                $lawyerId       = $lawyer->id;
     
                 $primaryAddress = $lawyer->primaryAddress;
                 if ($primaryAddress) {
@@ -56,9 +61,11 @@ class AppointmentClientController extends Controller
                 }
             } elseif ($company) {
                 $providerType   = 'company';
-                $providerName   = $company->name;
-                $providerAvatar = $company->logo_url;
+                $providerName   = $company->owner->name;
+                $providerAvatar = $company->owner->avatar_url;
                 $providerTitle  = optional($company->specialties->first())->name;
+                $userId         = $company->owner ? $company->owner->id : null;
+                $companyId      = $company->id;
     
                 $primaryAddress = $company->primaryAddress;
                 if ($primaryAddress) {
@@ -78,6 +85,9 @@ class AppointmentClientController extends Controller
                 'end_time'   => $appointment->end_time,
                 'provider'   => [
                     'type'       => $providerType,
+                    'user_id'    => $userId,
+                    'lawyer_id'  => $lawyerId,
+                    'company_id' => $companyId,
                     'name'       => $providerName,
                     'title'      => $providerTitle,
                     'avatar_url' => $providerAvatar,
@@ -88,7 +98,7 @@ class AppointmentClientController extends Controller
     
         return response()->json([
             'status' => true,
-            'data'   => $appointments,
+            'data'   => $transformedAppointments,
         ]);
     }
     

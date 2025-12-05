@@ -14,6 +14,7 @@ Route::prefix('auth')->group(function () {
     Route::post('reset-password',  [PasswordOtpController::class, 'reset']);
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('me',     [AuthController::class, 'me']);
+        Route::put('profile', [AuthController::class, 'updateProfile']);
         Route::post('logout', [AuthController::class, 'logout']);
     });
 });

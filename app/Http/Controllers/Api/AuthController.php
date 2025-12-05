@@ -237,4 +237,70 @@ class AuthController extends Controller
         $request->user()->tokens()->delete();
         return response()->json(['status' => 'success', 'message' => 'Logged out from all devices']);
     }
+
+    /**
+     * PUT /api/auth/profile
+     * Update user profile (avatar, email, password, name, phone)
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $rules = [
+            'name'     => ['sometimes', 'required', 'string', 'max:190'],
+            'email'    => ['sometimes', 'required', 'email', 'unique:users,email,' . $user->id],
+            'phone'    => ['sometimes', 'nullable', 'string', 'max:50', 'unique:users,phone,' . $user->id],
+            'avatar'   => ['sometimes', 'nullable', 'image', 'mimes:jpg,jpeg,png', 'max:2048'],
+        ];
+
+        // Password validation rules - require old_password, password, and password_confirmation
+        if ($request->has('password') || $request->has('old_password')) {
+            $rules['old_password'] = ['required', 'string'];
+            $rules['password'] = ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()];
+        }
+
+        $data = $request->validate($rules);
+
+        // Handle password update with old password verification
+        if (isset($data['password'])) {
+            // Verify old password
+            if (!Hash::check($data['old_password'], $user->password)) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'The old password is incorrect.',
+                    'errors'  => ['old_password' => ['The old password is incorrect.']]
+                ], 422);
+            }
+
+            // Hash new password
+            $data['password'] = Hash::make($data['password']);
+            // Remove old_password from data array as it's not a user field
+            unset($data['old_password']);
+        }
+
+        // Handle avatar upload
+        $oldAvatarPath = $user->avatar;
+        if ($request->hasFile('avatar')) {
+            // Delete old avatar if exists
+            if ($oldAvatarPath && Storage::disk('public')->exists($oldAvatarPath)) {
+                Storage::disk('public')->delete($oldAvatarPath);
+            }
+            $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
+        } else {
+            // Remove avatar from update if not provided
+            unset($data['avatar']);
+        }
+
+        // Update user
+        $user->update($data);
+
+        // Reload relationships
+        $user->load('roles', 'permissions', 'lawyer.specialties', 'company.specialties');
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Profile updated successfully',
+            'data'    => ['user' => $user],
+        ]);
+    }
 }

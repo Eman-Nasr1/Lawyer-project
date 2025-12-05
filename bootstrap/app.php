@@ -22,7 +22,6 @@ return Application::configure(basePath: dirname(__DIR__))
         App\Modules\Sliders\Providers\SlidersServiceProvider::class,
         App\Modules\ImportantSites\Providers\ImportantSitesServiceProvider::class,
         App\Modules\Company\Providers\CompanyServiceProvider::class,
-       
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
