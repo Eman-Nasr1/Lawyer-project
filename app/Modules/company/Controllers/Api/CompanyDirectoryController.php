@@ -86,7 +86,7 @@ class CompanyDirectoryController extends Controller
         $companies = $query->paginate($perPage);
 
         // Transform data
-        $companies->getCollection()->transform(function ($company) use ($userId) {
+        $transformedCompanies = $companies->through(function ($company) use ($userId) {
             $primaryAddress = $company->primaryAddress;
         
             // Is favorite
@@ -99,6 +99,8 @@ class CompanyDirectoryController extends Controller
         
             return [
                 'id'   => $company->owner->id,
+                'user_id' => $company->owner->id,
+                'company_id' => $company->id,
                 'name' => $company->owner->name,                 // اسم الشركة
                 'avatar_url' => $company->owner->avatar_url, 
                       // زي المحامي، لكن هنا لوجو الشركة
@@ -128,11 +130,10 @@ class CompanyDirectoryController extends Controller
                 'is_favorite' => $isFavorite,
             ];
         });
-        
 
         return response()->json([
             'status' => true,
-            'data'   => $companies,
+            'data'   => $transformedCompanies,
         ]);
     }
 
