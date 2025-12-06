@@ -82,6 +82,27 @@ class FavoriteController extends Controller
                                 'slug' => $specialty->slug,
                             ];
                         }) : [],
+                        'reviews' => $favoritable->reviews ? $favoritable->reviews->map(function ($review) {
+                            return [
+                                'id' => $review->id,
+                                'rating' => (int) $review->rating,
+                                'comment' => $review->comment,
+                                'posted_at' => $review->posted_at ? $review->posted_at->format('Y-m-d H:i:s') : ($review->created_at ? $review->created_at->format('Y-m-d H:i:s') : null),
+                                'reviewer' => $review->reviewer ? [
+                                    'id' => $review->reviewer->id,
+                                    'name' => $review->reviewer->name,
+                                    'avatar' => $review->reviewer->avatar,
+                                    'avatar_url' => $review->reviewer->avatar_url,
+                                ] : null,
+                            ];
+                        }) : [],
+                        'address' => $favoritable->primaryAddress ? [
+                            'city' => $favoritable->primaryAddress->city,
+                            'area' => $favoritable->primaryAddress->address_line,
+                            'full_address' => $this->formatAddress($favoritable->primaryAddress),
+                            'lat' => $favoritable->primaryAddress->lat ? (float) $favoritable->primaryAddress->lat : null,
+                            'lng' => $favoritable->primaryAddress->lng ? (float) $favoritable->primaryAddress->lng : null,
+                        ] : null,
                     ];
                 } elseif ($favorite->favoritable_type === 'company' && $favoritable instanceof \App\Models\Company) {
                     $data['company'] = [
@@ -110,6 +131,27 @@ class FavoriteController extends Controller
                                 'slug' => $specialty->slug,
                             ];
                         }) : [],
+                        'reviews' => $favoritable->reviews ? $favoritable->reviews->map(function ($review) {
+                            return [
+                                'id' => $review->id,
+                                'rating' => (int) $review->rating,
+                                'comment' => $review->comment,
+                                'posted_at' => $review->posted_at ? $review->posted_at->format('Y-m-d H:i:s') : ($review->created_at ? $review->created_at->format('Y-m-d H:i:s') : null),
+                                'reviewer' => $review->reviewer ? [
+                                    'id' => $review->reviewer->id,
+                                    'name' => $review->reviewer->name,
+                                    'avatar' => $review->reviewer->avatar,
+                                    'avatar_url' => $review->reviewer->avatar_url,
+                                ] : null,
+                            ];
+                        }) : [],
+                        'address' => $favoritable->primaryAddress ? [
+                            'city' => $favoritable->primaryAddress->city,
+                            'area' => $favoritable->primaryAddress->address_line,
+                            'full_address' => $this->formatAddress($favoritable->primaryAddress),
+                            'lat' => $favoritable->primaryAddress->lat ? (float) $favoritable->primaryAddress->lat : null,
+                            'lng' => $favoritable->primaryAddress->lng ? (float) $favoritable->primaryAddress->lng : null,
+                        ] : null,
                     ];
                 }
             }
@@ -118,5 +160,18 @@ class FavoriteController extends Controller
         });
 
         return response()->json($transformedFavorites);
+    }
+
+    private function formatAddress($address)
+    {
+        $parts = array_filter([
+            $address->address_line,
+            $address->building_number ? 'Building ' . $address->building_number : null,
+            $address->floor_number ? 'Floor ' . $address->floor_number : null,
+            $address->apartment_number ? 'Apartment ' . $address->apartment_number : null,
+            $address->city,
+        ]);
+
+        return implode(', ', $parts) ?: null;
     }
 }

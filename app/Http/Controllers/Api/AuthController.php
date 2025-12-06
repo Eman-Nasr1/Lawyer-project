@@ -239,6 +239,52 @@ class AuthController extends Controller
     }
 
     /**
+     * POST /api/auth/resend-verification-otp
+     * Resend OTP for email verification
+     */
+    public function resendVerificationOtp(Request $request)
+    {
+        $data = $request->validate([
+            'email' => ['required', 'email', 'exists:users,email'],
+            'channel' => ['nullable', 'string', 'in:email,phone'],
+        ]);
+
+        $user = User::where('email', $data['email'])->first();
+
+        if (!$user) {
+            return response()->json([
+                'status' => 'fail',
+                'message' => 'User not found.'
+            ], 422);
+        }
+
+        // Check if email is already verified
+        if ($user->email_verified_at) {
+            return response()->json([
+                'status' => 'fail',
+                'message' => 'Email is already verified.'
+            ], 422);
+        }
+
+        $channel = $data['channel'] ?? 'email';
+
+        try {
+            $verification = PasswordOtpController::sendOtpFor($user, 'verify', $channel);
+            
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Verification OTP sent successfully.',
+                'data' => $verification
+            ], 200);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage()
+            ], 422);
+        }
+    }
+
+    /**
      * PUT /api/auth/profile
      * Update user profile (avatar, email, password, name, phone)
      */
@@ -250,13 +296,21 @@ class AuthController extends Controller
             'name'     => ['sometimes', 'required', 'string', 'max:190'],
             'email'    => ['sometimes', 'required', 'email', 'unique:users,email,' . $user->id],
             'phone'    => ['sometimes', 'nullable', 'string', 'max:50', 'unique:users,phone,' . $user->id],
-            'avatar'   => ['sometimes', 'nullable', 'image', 'mimes:jpg,jpeg,png', 'max:2048'],
         ];
 
         // Password validation rules - require old_password, password, and password_confirmation
         if ($request->has('password') || $request->has('old_password')) {
             $rules['old_password'] = ['required', 'string'];
             $rules['password'] = ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()];
+        }
+
+        // Avatar validation - only validate if file is present
+        // Debug: Check what's in the request
+        if ($request->hasFile('avatar')) {
+            $rules['avatar'] = ['image', 'mimes:jpg,jpeg,png', 'max:2048'];
+        } elseif ($request->file('avatar')) {
+            // Alternative check for file
+            $rules['avatar'] = ['image', 'mimes:jpg,jpeg,png', 'max:2048'];
         }
 
         $data = $request->validate($rules);
@@ -279,20 +333,35 @@ class AuthController extends Controller
         }
 
         // Handle avatar upload
+        // Note: File uploads are not included in validated $data, so handle separately
         $oldAvatarPath = $user->avatar;
+        
+        // Check for file upload - try multiple methods for compatibility
+        // PUT requests with multipart/form-data can be problematic, so check allFiles() too
+        $avatarFile = null;
         if ($request->hasFile('avatar')) {
+            $avatarFile = $request->file('avatar');
+        } elseif ($request->file('avatar')) {
+            $avatarFile = $request->file('avatar');
+        } elseif ($request->allFiles() && isset($request->allFiles()['avatar'])) {
+            $avatarFile = $request->allFiles()['avatar'];
+        }
+        
+        if ($avatarFile && $avatarFile->isValid()) {
             // Delete old avatar if exists
             if ($oldAvatarPath && Storage::disk('public')->exists($oldAvatarPath)) {
                 Storage::disk('public')->delete($oldAvatarPath);
             }
-            $data['avatar'] = $request->file('avatar')->store('avatars', 'public');
-        } else {
-            // Remove avatar from update if not provided
-            unset($data['avatar']);
+            // Store new avatar and add to data array
+            $data['avatar'] = $avatarFile->store('avatars', 'public');
         }
+        // Note: Don't unset avatar if not provided - we only update fields that are present
 
         // Update user
         $user->update($data);
+        
+        // Refresh user to get updated avatar
+        $user->refresh();
 
         // Reload relationships
         $user->load('roles', 'permissions', 'lawyer.specialties', 'company.specialties');

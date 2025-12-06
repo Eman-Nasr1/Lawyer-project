@@ -66,7 +66,16 @@ class FavoriteRepository implements FavoriteRepositoryInterface
         $lawyers = [];
         if (!empty($lawyerIds)) {
             $lawyers = Lawyer::whereIn('id', $lawyerIds)
-                ->with(['user', 'specialties'])
+                ->with([
+                    'user', 
+                    'specialties', 
+                    'primaryAddress',
+                    'reviews' => function ($query) {
+                        $query->with('reviewer:id,name,avatar')
+                              ->latest('posted_at')
+                              ->limit(10);
+                    }
+                ])
                 ->get()
                 ->keyBy('id');
         }
@@ -75,7 +84,16 @@ class FavoriteRepository implements FavoriteRepositoryInterface
         $companies = [];
         if (!empty($companyIds)) {
             $companies = Company::whereIn('id', $companyIds)
-                ->with(['owner', 'specialties'])
+                ->with([
+                    'owner', 
+                    'specialties', 
+                    'primaryAddress',
+                    'reviews' => function ($query) {
+                        $query->with('reviewer:id,name,avatar')
+                              ->latest('posted_at')
+                              ->limit(10);
+                    }
+                ])
                 ->get()
                 ->keyBy('id');
         }
