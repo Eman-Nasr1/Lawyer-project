@@ -28,7 +28,16 @@ class LawyerDirectoryController extends Controller
         $userId = Auth::id();
 
         $query = Lawyer::where('is_approved', true)
-            ->with(['user', 'specialties', 'primaryAddress']);
+            ->with([
+                'user', 
+                'specialties', 
+                'primaryAddress',
+                'reviews' => function ($query) {
+                    $query->with('reviewer:id,name,avatar')
+                          ->latest('posted_at')
+                          ->limit(10);
+                }
+            ]);
 
         // Filter by specialty
         if (!empty($validated['specialty_id'])) {
@@ -72,7 +81,7 @@ class LawyerDirectoryController extends Controller
         $lawyers = $query->paginate($perPage);
 
         // Transform the data
-        $lawyers->getCollection()->transform(function ($lawyer) use ($userId) {
+        $transformedLawyers = $lawyers->through(function ($lawyer) use ($userId) {
             $primaryAddress = $lawyer->primaryAddress;
             
             // Check if favorite
@@ -103,12 +112,26 @@ class LawyerDirectoryController extends Controller
                 'cases_count' => null, // Add if you have this field
                 'clients_count' => null, // Add if you have this field
                 'is_favorite' => $isFavorite,
+                'reviews' => $lawyer->reviews ? $lawyer->reviews->map(function ($review) {
+                    return [
+                        'id' => $review->id,
+                        'rating' => (int) $review->rating,
+                        'comment' => $review->comment,
+                        'posted_at' => $review->posted_at ? $review->posted_at->format('Y-m-d H:i:s') : ($review->created_at ? $review->created_at->format('Y-m-d H:i:s') : null),
+                        'reviewer' => $review->reviewer ? [
+                            'id' => $review->reviewer->id,
+                            'name' => $review->reviewer->name,
+                            'avatar' => $review->reviewer->avatar,
+                            'avatar_url' => $review->reviewer->avatar_url,
+                        ] : null,
+                    ];
+                }) : [],
             ];
         });
 
         return response()->json([
             'status' => true,
-            'data' => $lawyers
+            'data' => $transformedLawyers
         ]);
     }
 

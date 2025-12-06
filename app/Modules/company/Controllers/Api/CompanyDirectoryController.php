@@ -28,7 +28,16 @@ class CompanyDirectoryController extends Controller
         $userId  = Auth::id();
 
         $query = Company::approved()
-            ->with(['owner', 'specialties', 'primaryAddress']);
+            ->with([
+                'owner', 
+                'specialties', 
+                'primaryAddress',
+                'reviews' => function ($query) {
+                    $query->with('reviewer:id,name,avatar')
+                          ->latest('posted_at')
+                          ->limit(10);
+                }
+            ]);
 
         // Filter by specialty
         if (!empty($validated['specialty_id'])) {
@@ -128,6 +137,20 @@ class CompanyDirectoryController extends Controller
                 'clients_count' => null,
         
                 'is_favorite' => $isFavorite,
+                'reviews' => $company->reviews ? $company->reviews->map(function ($review) {
+                    return [
+                        'id' => $review->id,
+                        'rating' => (int) $review->rating,
+                        'comment' => $review->comment,
+                        'posted_at' => $review->posted_at ? $review->posted_at->format('Y-m-d H:i:s') : ($review->created_at ? $review->created_at->format('Y-m-d H:i:s') : null),
+                        'reviewer' => $review->reviewer ? [
+                            'id' => $review->reviewer->id,
+                            'name' => $review->reviewer->name,
+                            'avatar' => $review->reviewer->avatar,
+                            'avatar_url' => $review->reviewer->avatar_url,
+                        ] : null,
+                    ];
+                }) : [],
             ];
         });
 
