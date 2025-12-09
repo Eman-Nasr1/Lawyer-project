@@ -73,4 +73,43 @@ class Lawyer extends Model
             ->withPivot(['title', 'is_primary'])
             ->withTimestamps();
     }
+    
+    public function availabilities()
+    {
+        return $this->hasMany(LawyerAvailability::class);
+    }
+    
+    /**
+     * Check if lawyer profile is complete
+     * @return array ['is_complete' => bool, 'missing_fields' => array]
+     */
+    public function isProfileComplete(): array
+    {
+        $missingFields = [];
+        
+        // Check for primary address
+        if (!$this->primaryAddress) {
+            $missingFields[] = 'address';
+        }
+        
+        // Check for at least one availability slot
+        if (!$this->availabilities()->where('is_active', true)->exists()) {
+            $missingFields[] = 'availability';
+        }
+        
+        // Check for professional card image
+        if (!$this->professional_card_image) {
+            $missingFields[] = 'professional_card_image';
+        }
+        
+        // Optional: Check for specialties
+        // if ($this->specialties()->count() === 0) {
+        //     $missingFields[] = 'specialties';
+        // }
+        
+        return [
+            'is_complete' => empty($missingFields),
+            'missing_fields' => $missingFields,
+        ];
+    }
 }

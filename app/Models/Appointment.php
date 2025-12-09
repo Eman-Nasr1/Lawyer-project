@@ -18,6 +18,7 @@ class Appointment extends Model
         'end_time',
         'status',
         'notes',
+        'case_type',
         'attachments',
     ];
 

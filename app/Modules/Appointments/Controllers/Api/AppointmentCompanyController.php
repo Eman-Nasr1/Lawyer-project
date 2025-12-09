@@ -45,6 +45,8 @@ class AppointmentCompanyController extends Controller
                 'date'       => $appointment->date,
                 'start_time' => $appointment->start_time,
                 'end_time'   => $appointment->end_time,
+                'case_type'  => $appointment->case_type,
+                'notes'      => $appointment->notes,
     
                 'client' => $client ? [
                     'id'         => $client->id,

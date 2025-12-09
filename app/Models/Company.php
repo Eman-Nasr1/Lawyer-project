@@ -87,4 +87,38 @@ class Company extends Model
     {
         return $this->morphMany(\App\Models\Review::class, 'reviewable');
     }
+    
+    public function availabilities()
+    {
+        return $this->hasMany(CompanyAvailability::class);
+    }
+    
+    /**
+     * Check if company profile is complete
+     * @return array ['is_complete' => bool, 'missing_fields' => array]
+     */
+    public function isProfileComplete(): array
+    {
+        $missingFields = [];
+        
+        // Check for primary address
+        if (!$this->primaryAddress) {
+            $missingFields[] = 'address';
+        }
+        
+        // Check for at least one availability slot
+        if (!$this->availabilities()->where('is_active', true)->exists()) {
+            $missingFields[] = 'availability';
+        }
+        
+        // Check for professional card image
+        if (!$this->professional_card_image) {
+            $missingFields[] = 'professional_card_image';
+        }
+        
+        return [
+            'is_complete' => empty($missingFields),
+            'missing_fields' => $missingFields,
+        ];
+    }
 }

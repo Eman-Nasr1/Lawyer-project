@@ -4,6 +4,7 @@ namespace App\Modules\Appointments\Services;
 
 use App\Modules\Appointments\Repositories\AppointmentRepositoryInterface;
 use App\Models\LawyerAvailability;
+use App\Models\CompanyAvailability;
 use Illuminate\Http\UploadedFile;
 use RuntimeException;
 use Illuminate\Support\Str;
@@ -26,12 +27,26 @@ class AppointmentService
     
         // لو فيه محامي → نطبق الـ availability + overlap
         if ($lawyerId) {
-            if (!$this->isWithinAvailability($lawyerId, $data['date'], $data['start_time'], $data['end_time'])) {
+            if (!$this->isWithinLawyerAvailability($lawyerId, $data['date'], $data['start_time'], $data['end_time'])) {
                 throw new RuntimeException('Selected time is outside lawyer availability.');
             }
     
             $this->assertNoOverlapWithAppointments(
                 $lawyerId,
+                $data['date'],
+                $data['start_time'],
+                $data['end_time']
+            );
+        }
+        
+        // لو فيه شركة → نطبق الـ availability + overlap
+        if ($companyId) {
+            if (!$this->isWithinCompanyAvailability($companyId, $data['date'], $data['start_time'], $data['end_time'])) {
+                throw new RuntimeException('Selected time is outside company availability.');
+            }
+    
+            $this->assertNoOverlapWithCompanyAppointments(
+                $companyId,
                 $data['date'],
                 $data['start_time'],
                 $data['end_time']
@@ -95,7 +110,7 @@ class AppointmentService
     }
 
     // ===== helpers =====
-    private function isWithinAvailability(int $lawyerId, string $date, string $start, string $end): bool
+    private function isWithinLawyerAvailability(int $lawyerId, string $date, string $start, string $end): bool
     {
         $dow = strtolower(date('l', strtotime($date)));
         $avail = LawyerAvailability::query()
@@ -109,10 +124,37 @@ class AppointmentService
         foreach ($avail as $a) if ($this->within($start, $end, $a->start_time, $a->end_time)) return true;
         return false;
     }
+    
+    private function isWithinCompanyAvailability(int $companyId, string $date, string $start, string $end): bool
+    {
+        $dow = strtolower(date('l', strtotime($date)));
+        $avail = CompanyAvailability::query()
+            ->where('company_id', $companyId)
+            ->where('is_active', true)
+            ->where(function ($q) use ($date, $dow) {
+                $q->where('date', $date)->orWhere('day_of_week', $dow);
+            })
+            ->get();
+
+        foreach ($avail as $a) if ($this->within($start, $end, $a->start_time, $a->end_time)) return true;
+        return false;
+    }
+    
     private function within(string $s, string $e, string $as, string $ae): bool { return ($s >= $as && $e <= $ae); }
+    
     private function assertNoOverlapWithAppointments(int $lawyerId, string $date, string $s, string $e): void
     {
         $booked = $this->repo->forLawyerOnDate($lawyerId, $date);
+        foreach ($booked as $b) if (!($e <= $b->start_time || $s >= $b->end_time))
+            throw new RuntimeException('Selected time overlaps with another appointment.');
+    }
+    
+    private function assertNoOverlapWithCompanyAppointments(int $companyId, string $date, string $s, string $e): void
+    {
+        $booked = \App\Models\Appointment::where('company_id', $companyId)
+            ->whereDate('date', $date)
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->get();
         foreach ($booked as $b) if (!($e <= $b->start_time || $s >= $b->end_time))
             throw new RuntimeException('Selected time overlaps with another appointment.');
     }

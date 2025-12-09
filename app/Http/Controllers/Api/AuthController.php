@@ -74,7 +74,11 @@ class AuthController extends Controller
                 $avatarPath = $request->file('avatar')->store('avatars', 'public');
             }
             if ($request->hasFile('professional_card_image')) {
-                $cardPath = $request->file('professional_card_image')->store('lawyers/cards', 'public');
+                // Store in appropriate directory based on role
+                $cardPath = $request->file('professional_card_image')->store(
+                    $role === 'company' ? 'companies/cards' : 'lawyers/cards', 
+                    'public'
+                );
             }
 
             $user = DB::transaction(function () use ($data, $avatarPath, $cardPath, $role) {
@@ -193,15 +197,39 @@ class AuthController extends Controller
 
         $token = $user->createToken('api', ['*'])->plainTextToken;
 
-        $user->load('roles', 'permissions', 'lawyer.specialties', 'company.specialties');
+        $user->load('roles', 'permissions', 'lawyer.specialties', 'company.specialties', 'lawyer.availabilities', 'company.availabilities', 'lawyer.primaryAddress', 'company.primaryAddress');
+
+        // Add profile complete flag for lawyers and companies
+        $profileComplete = null;
+        $missingFields = [];
+        
+        if ($user->lawyer) {
+            $profileCheck = $user->lawyer->isProfileComplete();
+            $profileComplete = $profileCheck['is_complete'];
+            $missingFields = $profileCheck['missing_fields'];
+        } elseif ($user->company) {
+            $profileCheck = $user->company->isProfileComplete();
+            $profileComplete = $profileCheck['is_complete'];
+            $missingFields = $profileCheck['missing_fields'];
+        }
+
+        $responseData = [
+            'user'       => $user,
+            'token'      => $token,
+            'token_type' => 'Bearer',
+        ];
+        
+        // Add profile complete info for lawyers and companies
+        if ($user->type === 'lawyer' || $user->type === 'company') {
+            $responseData['is_profile_complete'] = $profileComplete ?? false;
+            if (!empty($missingFields)) {
+                $responseData['missing_fields'] = $missingFields;
+            }
+        }
 
         return response()->json([
             'status' => 'success',
-            'data'   => [
-                'user'       => $user,
-                'token'      => $token,
-                'token_type' => 'Bearer',
-            ]
+            'data'   => $responseData
         ]);
     }
 
@@ -357,8 +385,53 @@ class AuthController extends Controller
         }
         // Note: Don't unset avatar if not provided - we only update fields that are present
 
+        // Handle professional card image for lawyers and companies
+        $professionalCardFile = null;
+        if ($request->hasFile('professional_card_image')) {
+            $professionalCardFile = $request->file('professional_card_image');
+        } elseif ($request->file('professional_card_image')) {
+            $professionalCardFile = $request->file('professional_card_image');
+        } elseif ($request->allFiles() && isset($request->allFiles()['professional_card_image'])) {
+            $professionalCardFile = $request->allFiles()['professional_card_image'];
+        }
+        
+        // Validate professional card image if provided
+        if ($professionalCardFile || $request->has('professional_card_image')) {
+            $request->validate([
+                'professional_card_image' => ['image', 'mimes:jpg,jpeg,png', 'max:4096'],
+            ]);
+        }
+        
         // Update user
         $user->update($data);
+        
+        // Handle professional card image update for lawyer
+        if ($professionalCardFile && $professionalCardFile->isValid() && $user->lawyer) {
+            $oldCardPath = $user->lawyer->professional_card_image;
+            
+            // Delete old professional card if exists
+            if ($oldCardPath && Storage::disk('public')->exists($oldCardPath)) {
+                Storage::disk('public')->delete($oldCardPath);
+            }
+            
+            // Store new professional card
+            $cardPath = $professionalCardFile->store('lawyers/cards', 'public');
+            $user->lawyer->update(['professional_card_image' => $cardPath]);
+        }
+        
+        // Handle professional card image update for company
+        if ($professionalCardFile && $professionalCardFile->isValid() && $user->company) {
+            $oldCardPath = $user->company->professional_card_image;
+            
+            // Delete old professional card if exists
+            if ($oldCardPath && Storage::disk('public')->exists($oldCardPath)) {
+                Storage::disk('public')->delete($oldCardPath);
+            }
+            
+            // Store new professional card (use same path structure or create companies/cards)
+            $cardPath = $professionalCardFile->store('companies/cards', 'public');
+            $user->company->update(['professional_card_image' => $cardPath]);
+        }
         
         // Refresh user to get updated avatar
         $user->refresh();

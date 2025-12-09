@@ -21,5 +21,14 @@ Route::middleware(['auth:sanctum', 'role:company'])
 
         // حذف محامي من الشركة (فك الربط)
         Route::delete('/lawyers/{lawyer}', [CompanyLawyerController::class, 'detach']);
+        
+        // Company availability CRUD endpoints
+        Route::get('/availabilities', [\App\Modules\Company\Controllers\Api\CompanyAvailabilityController::class, 'index']);
+        Route::post('/availabilities', [\App\Modules\Company\Controllers\Api\CompanyAvailabilityController::class, 'store']);
+        Route::put('/availabilities/{id}', [\App\Modules\Company\Controllers\Api\CompanyAvailabilityController::class, 'update']);
+        Route::delete('/availabilities/{id}', [\App\Modules\Company\Controllers\Api\CompanyAvailabilityController::class, 'destroy']);
+        
+        // Legacy upsert endpoint (kept for backward compatibility)
+        Route::post('/availabilities/upsert', [\App\Modules\Company\Controllers\Api\CompanyAvailabilityUpsertController::class, 'upsert']);
     });
 });

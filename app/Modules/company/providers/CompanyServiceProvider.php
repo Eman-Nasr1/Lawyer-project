@@ -16,7 +16,10 @@ class CompanyServiceProvider extends ServiceProvider
 
     public function register()
     {
-        // نضمن إن الكنترولرز متشافة
-        
+        // Register CompanyAvailabilityRepository binding
+        $this->app->bind(
+            \App\Modules\Company\Repositories\CompanyAvailabilityRepositoryInterface::class,
+            \App\Modules\Company\Repositories\Eloquent\CompanyAvailabilityRepository::class
+        );
     }
 }
